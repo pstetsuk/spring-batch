@@ -26,10 +26,12 @@ import java.util.Arrays;
 import java.util.Collection;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.stream.Stream;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
-
 import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.ExitStatus;
 import org.springframework.batch.core.JobExecution;
@@ -89,6 +91,16 @@ public class JdbcStepExecutionDao extends AbstractJdbcBatchMetadataDao implement
 	private static final String GET_STEP_EXECUTIONS = GET_RAW_STEP_EXECUTIONS + " ORDER BY STEP_EXECUTION_ID";
 
 	private static final String GET_STEP_EXECUTION = GET_RAW_STEP_EXECUTIONS + " AND STEP_EXECUTION_ID = ?";
+
+	private static final String GET_STEP_EXECUTIONS_BY_IDS = GET_RAW_STEP_EXECUTIONS
+			+ " and STEP_EXECUTION_ID IN (%STEP_EXECUTION_IDS%)";
+
+	private static final String COUNT_STEP_EXECUTIONS_BY_IDS_AND_STATUSES = """
+			SELECT COUNT(*)
+			   FROM %PREFIX%STEP_EXECUTION SE
+			   WHERE SE.STEP_EXECUTION_ID IN (%STEP_EXECUTION_IDS%)
+			   AND SE.STATUS IN (%STEP_STATUSES%)
+			""";
 
 	private static final String GET_LAST_STEP_EXECUTION = """
 			SELECT SE.STEP_EXECUTION_ID, SE.STEP_NAME, SE.START_TIME, SE.END_TIME, SE.STATUS, SE.COMMIT_COUNT, SE.READ_COUNT, SE.FILTER_COUNT, SE.WRITE_COUNT, SE.EXIT_CODE, SE.EXIT_MESSAGE, SE.READ_SKIP_COUNT, SE.WRITE_SKIP_COUNT, SE.PROCESS_SKIP_COUNT, SE.ROLLBACK_COUNT, SE.LAST_UPDATED, SE.VERSION, SE.CREATE_TIME, JE.JOB_EXECUTION_ID, JE.START_TIME, JE.END_TIME, JE.STATUS, JE.EXIT_CODE, JE.EXIT_MESSAGE, JE.CREATE_TIME, JE.LAST_UPDATED, JE.VERSION
@@ -327,6 +339,16 @@ public class JdbcStepExecutionDao extends AbstractJdbcBatchMetadataDao implement
 	}
 
 	@Override
+	@Nullable
+	public Set<StepExecution> getStepExecutions(JobExecution jobExecution, Set<Long> stepExecutionIds) {
+		List<StepExecution> executions = getJdbcTemplate().query(
+				getQuery(GET_STEP_EXECUTIONS_BY_IDS, Map.of("%STEP_EXECUTION_IDS%", stepExecutionIds)),
+				new StepExecutionRowMapper(jobExecution),
+				Stream.concat(Stream.of(jobExecution.getId()), stepExecutionIds.stream()).toArray(Object[]::new));
+		return Set.copyOf(executions);
+	}
+
+	@Override
 	public StepExecution getLastStepExecution(JobInstance jobInstance, String stepName) {
 		List<StepExecution> executions = getJdbcTemplate().query(getQuery(GET_LAST_STEP_EXECUTION), (rs, rowNum) -> {
 			Long jobExecutionId = rs.getLong(19);
@@ -358,6 +380,16 @@ public class JdbcStepExecutionDao extends AbstractJdbcBatchMetadataDao implement
 	public long countStepExecutions(JobInstance jobInstance, String stepName) {
 		return getJdbcTemplate().queryForObject(getQuery(COUNT_STEP_EXECUTIONS), Long.class,
 				jobInstance.getInstanceId(), stepName);
+	}
+
+	@Override
+	public long countStepExecutions(Collection<Long> stepExecutionIds, Collection<BatchStatus> matchingBatchStatuses) {
+		return getJdbcTemplate().queryForObject(
+				getQuery(COUNT_STEP_EXECUTIONS_BY_IDS_AND_STATUSES,
+						Map.of("%STEP_EXECUTION_IDS%", stepExecutionIds, "%STEP_STATUSES%", matchingBatchStatuses)),
+				Long.class,
+				Stream.concat(stepExecutionIds.stream(), matchingBatchStatuses.stream().map(BatchStatus::name))
+					.toArray(Object[]::new));
 	}
 
 	/**
