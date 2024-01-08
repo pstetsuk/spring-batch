@@ -8,7 +8,7 @@
 		designed to enable the development of robust batch applications vital
 		for the daily operations of enterprise systems. Spring Batch is part of
 		the Spring Portfolio.</description>
-	<version>5.0.4</version>
+	<version>5.0.4.1.patch</version>
 	<packaging>pom</packaging>
 	<url>https://projects.spring.io/spring-batch</url>
 
@@ -17,8 +17,8 @@
 		<module>spring-batch-core</module>
 		<module>spring-batch-test</module>
 		<module>spring-batch-integration</module>
-		<module>spring-batch-samples</module>
-		<module>spring-batch-docs</module>
+		<!--module>spring-batch-samples</module-->
+		<!--module>spring-batch-docs</module-->
 		<module>spring-batch-bom</module>
 	</modules>
 
