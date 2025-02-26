@@ -15,12 +15,9 @@
  */
 package org.springframework.batch.core.repository.dao;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Comparator;
-import java.util.List;
-import java.util.Optional;
+import java.util.*;
 
+import org.springframework.batch.core.BatchStatus;
 import org.springframework.batch.core.JobExecution;
 import org.springframework.batch.core.JobInstance;
 import org.springframework.batch.core.StepExecution;
@@ -97,6 +94,11 @@ public class MongoStepExecutionDao implements StepExecutionDao {
 	}
 
 	@Override
+	public Set<StepExecution> getStepExecutions(JobExecution jobExecution, Set<Long> stepExecutionIds) {
+		return null;
+	}
+
+	@Override
 	public StepExecution getLastStepExecution(JobInstance jobInstance, String stepName) {
 		// TODO optimize the query
 		// get all step executions
@@ -159,6 +161,11 @@ public class MongoStepExecutionDao implements StepExecutionDao {
 			}
 		}
 		return count;
+	}
+
+	@Override
+	public long countStepExecutions(Collection<Long> stepExecutionIds, Collection<BatchStatus> matchingBatchStatuses) {
+		return 0;
 	}
 
 }
